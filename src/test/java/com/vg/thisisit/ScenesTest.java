@@ -101,7 +101,7 @@ public class ScenesTest {
         if (h == 1080) {
             sb.append(" -vf scale=w=3840:h=2160");
         }
-        sb.append(" -pix_fmt yuv420p -vcodec libx264 -profile:v baseline -crf 18 ");
+        sb.append(" -pix_fmt yuv420p -vcodec libx264 -profile:v baseline -crf 18 -movflags faststart ");
         sb.append(" -y ").append(output);
 
         String dir = new File(output).getParent();
