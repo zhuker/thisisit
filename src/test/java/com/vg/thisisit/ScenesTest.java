@@ -7,8 +7,6 @@ import com.vg.ffprobe.FFProbe;
 import com.vg.ffprobe.FfprobeJS;
 import com.vg.ffprobe.FfprobeStream;
 import io.reactivex.Flowable;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
@@ -21,52 +19,7 @@ import static org.apache.commons.io.FilenameUtils.getName;
 import static org.apache.commons.io.FilenameUtils.getPath;
 
 public class ScenesTest {
-    static class Scene {
-        String name;
-        int start; //inclusive
-        int end;//inclusive
-        boolean good;
-        String comment;
-
-        @Override
-        public String toString() {
-            return "Scene{" +
-                    "name='" + name + '\'' +
-                    ", start=" + start +
-                    ", end=" + end +
-                    ", good=" + good +
-                    ", comment='" + comment + '\'' +
-                    '}';
-        }
-
-        int duration() {
-            return end - start + 1;
-        }
-
-
-    }
-
-    static class Moment {
-        int start; //inclusive
-        int end; //inclusive
-
-        Moment(int start, int end) {
-            this.start = start;
-            this.end = end;
-        }
-
-        int duration() {
-            return end - start + 1;
-        }
-
-        @Override
-        public String toString() {
-            return "Moment{" +
-                    "start=" + start +
-                    ", end=" + end +
-                    '}';
-        }
-    }
+    final static File SCENES_CSV = new File("Scenes.csv");
 
     @Test
     public void testScenes() throws IOException {
@@ -77,9 +30,9 @@ public class ScenesTest {
             frames.put(fn, line);
         });
 
-        File f = new File("/Users/zhukov/Desktop/sony/thisisit/oles_frames/Scenes.csv");
+
         Gson gson = new Gson();
-        scenes(f).subscribe(s -> {
+        Scene.scenes(SCENES_CSV).subscribe(s -> {
             System.out.println(s);
             Map<String, List<String>> framesByFolder = Flowable.range(s.start, s.duration()).concatMapIterable(fn -> frames.get(fn))
                     .groupBy(filename -> getPath(filename))
@@ -117,11 +70,11 @@ public class ScenesTest {
                         System.err.println("different image sizes " + picSizes);
                     } else {
                         String picSize = picSizes.get(0);
-                        printCommands(moment, folder, picSize, s.name);
+                        printCommands(moment, "/Users/zhukov/Desktop/sony/thisisit/"+folder, picSize, s.name);
 
                     }
                 });
-                printCommands(moment, "reel02/elabv1/1920x1080", "1920x1080@rgb48", s.name);
+                printCommands(moment, "/Users/zhukov/Desktop/sony/thisisit/reel02/elabv1/1920x1080", "1920x1080@rgb48", s.name);
             }
         }, e -> {
             e.printStackTrace();
@@ -130,7 +83,7 @@ public class ScenesTest {
 
     private final static String RENDERS = "/Users/zhukov/Desktop/sony/thisisit/renders";
 
-    private void printCommands(Moment moment, String folder, String picSize, String sceneName) {
+    static void printCommands(Moment moment, String folder, String picSize, String sceneName) {
         String[] split = picSize.split("[x@]");
         int w = Integer.parseInt(split[0]);
         int h = Integer.parseInt(split[1]);
@@ -142,7 +95,7 @@ public class ScenesTest {
         sb.append(" -r 24");
         sb.append(" -start_number ").append(moment.start);
         sb.append(" -f image2");
-        sb.append(" -i '").append("/Users/zhukov/Desktop/sony/thisisit/").append(folder).append("/elabv1_reel_2ab.0%06d.dpx.png'");
+        sb.append(" -i '").append(folder).append("/elabv1_reel_2ab.0%06d.dpx.png'");
         sb.append(" -r 24");
         sb.append(" -vframes ").append(moment.duration());
         if (h == 1080) {
@@ -154,18 +107,6 @@ public class ScenesTest {
         String dir = new File(output).getParent();
         System.out.println("# test -d " + dir + " || mkdir -p " + dir);
         System.out.println(sb.toString());
-    }
-
-    private Flowable<Scene> scenes(File f) throws IOException {
-        return Flowable.fromIterable(CSVParser.parse(f, UTF_8, CSVFormat.DEFAULT.withFirstRecordAsHeader())).map(x -> {
-            Scene scene = new Scene();
-            scene.name = x.get(0);
-            scene.start = Integer.parseInt(x.get(1).trim(), 10);
-            scene.end = Integer.parseInt(x.get(2).trim(), 10);
-            scene.good = x.get(3).startsWith("good");
-            scene.comment = x.get(4);
-            return scene;
-        });
     }
 
     private static Moment longestRange(Collection<String> files) {
